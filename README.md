@@ -49,11 +49,11 @@ A production build of CodeArena has all of the following. A demo may land them i
 Teammates need access to all three private repositories. Access to this parent repo does not grant access to the nested ones.
 
 ```powershell
-git clone --recurse-submodules https://github.com/OWNER/codearena.git
+git clone --recurse-submodules https://github.com/sumukhalraju/codearena.git
 cd codearena
 ```
 
-Replace `OWNER` with the GitHub account that owns the repositories. If the clone was made without submodules:
+If the clone was made without submodules:
 
 ```powershell
 git submodule update --init --recursive
