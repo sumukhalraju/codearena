@@ -1,0 +1,160 @@
+{
+  "product": "CodeArena",
+  "matchFormat": "four-round-battle",
+  "languages": [
+    {
+      "id": "c",
+      "label": "C",
+      "sourceFile": "main.c",
+      "compile": "gcc -O2 -std=c11 -pipe -static-libgcc -o /tmp/main /work/main.c",
+      "run": "/tmp/main"
+    },
+    {
+      "id": "cpp",
+      "label": "C++",
+      "sourceFile": "main.cpp",
+      "compile": "g++ -O2 -std=c++17 -pipe -o /tmp/main /work/main.cpp",
+      "run": "/tmp/main"
+    },
+    {
+      "id": "python",
+      "label": "Python",
+      "sourceFile": "main.py",
+      "compile": null,
+      "run": "python3 -I /work/main.py"
+    },
+    {
+      "id": "javascript",
+      "label": "JavaScript",
+      "sourceFile": "main.js",
+      "compile": null,
+      "run": "node --no-warnings /work/main.js"
+    }
+  ],
+  "difficulties": ["easy", "medium", "hard"],
+  "rounds": [
+    {
+      "index": 1,
+      "type": "syntax",
+      "title": "Find Syntax Error",
+      "interaction": "edit_code",
+      "durationMs": 90000,
+      "maxGradedSubmissions": 6,
+      "maxSampleRuns": 20,
+      "sampleRunCooldownMs": 5000
+    },
+    {
+      "index": 2,
+      "type": "predict",
+      "title": "Predict Output",
+      "interaction": "choose_answer",
+      "durationMs": 40000,
+      "maxGradedSubmissions": 1,
+      "optionCount": 4
+    },
+    {
+      "index": 3,
+      "type": "logic",
+      "title": "Find Logical Error",
+      "interaction": "choose_answer",
+      "durationMs": 50000,
+      "maxGradedSubmissions": 1,
+      "optionCount": 4
+    },
+    {
+      "index": 4,
+      "type": "fix",
+      "title": "Fix the Code",
+      "interaction": "edit_code",
+      "durationMs": 180000,
+      "maxGradedSubmissions": 10,
+      "maxSampleRuns": 30,
+      "sampleRunCooldownMs": 5000
+    }
+  ],
+  "countdownMs": 3000,
+  "intermissionMs": 5000,
+  "judgeGraceMs": 30000,
+  "disconnect": {
+    "clientHeartbeatMs": 5000,
+    "serverTimeoutMs": 15000,
+    "reconnectGraceMs": 30000
+  },
+  "voidIfNoSubmissionWithinMs": 15000,
+  "scoring": {
+    "roundMax": 100,
+    "speedWeight": 0.7,
+    "speedFloor": 30,
+    "wrongAttemptPenalty": 10,
+    "minimumCorrectScore": 1
+  },
+  "elo": {
+    "start": 1200,
+    "floor": 100,
+    "kProvisional": 40,
+    "provisionalMatches": 10,
+    "kNormal": 20,
+    "kHigh": 10,
+    "highRatingAt": 2000,
+    "scale": 400
+  },
+  "ratedDifficultyCaps": [
+    { "minRating": 1600, "blockedDifficulties": ["easy"] },
+    { "minRating": 2000, "blockedDifficulties": ["easy", "medium"] }
+  ],
+  "matchmaking": {
+    "tickMs": 1000,
+    "windows": [
+      { "afterMs": 0, "ratingDelta": 100 },
+      { "afterMs": 10000, "ratingDelta": 200 },
+      { "afterMs": 25000, "ratingDelta": 350 },
+      { "afterMs": 45000, "ratingDelta": 600 },
+      { "afterMs": 90000, "ratingDelta": null }
+    ],
+    "samePairRatedCap": 3,
+    "samePairWindowHours": 24,
+    "avoidRecentProblems": 20
+  },
+  "lobby": {
+    "codeLength": 6,
+    "codeAlphabet": "ABCDEFGHJKLMNPQRSTUVWXYZ23456789",
+    "ttlMs": 1800000,
+    "rated": false
+  },
+  "limits": {
+    "sourceBytes": 65536,
+    "stdoutBytes": 262144,
+    "stderrBytes": 8192,
+    "compileTimeoutMs": 10000,
+    "compileMemoryKb": 262144,
+    "defaultRunTimeoutMs": 2000,
+    "maxRunTimeoutMs": 5000,
+    "defaultMemoryKb": 131072,
+    "maxMemoryKb": 262144,
+    "pidsLimit": 64,
+    "cpus": "1.0",
+    "tmpfsMb": 64,
+    "hiddenTestsMin": 3,
+    "hiddenTestsMax": 20,
+    "sampleTestsMin": 1,
+    "sampleTestsMax": 3,
+    "promptMarkdownMaxBytes": 20000,
+    "optionTextMaxBytes": 2000
+  },
+  "auth": {
+    "accessTtlSec": 900,
+    "refreshTtlSec": 2592000,
+    "wsTicketTtlSec": 30,
+    "passwordMinLength": 10,
+    "usernamePattern": "^[a-z0-9_]{3,20}$",
+    "resetTtlSec": 1800
+  },
+  "rateLimits": {
+    "signupPerIpPerHour": 5,
+    "loginPerIpPer15Min": 10,
+    "loginPerAccountPer15Min": 10,
+    "gradedSubmissionsPerUserPerMin": 30,
+    "sampleRunsPerUserPerMin": 12,
+    "queueJoinsPerUserPerMin": 10
+  }
+}

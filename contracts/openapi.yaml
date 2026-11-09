@@ -1,0 +1,1104 @@
+openapi: 3.0.3
+info:
+  title: CodeArena API
+  version: 0.1.0
+  description: >
+    HTTP contract for CodeArena. Behavior that does not fit a schema is
+    normative in docs/06-http-api.md. Field names here win over prose
+    when a name disagrees.
+servers:
+  - url: http://localhost:4000
+    description: Local API
+  - url: https://api.example.com
+    description: Production API
+tags:
+  - name: auth
+  - name: profile
+  - name: queue
+  - name: lobbies
+  - name: matches
+  - name: setter
+  - name: admin
+  - name: health
+paths:
+  /api/v1/auth/signup:
+    post:
+      tags: [auth]
+      operationId: signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+      responses:
+        "201":
+          description: Account created and session started
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+  /api/v1/auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Session started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+  /api/v1/auth/refresh:
+    post:
+      tags: [auth]
+      operationId: refresh
+      responses:
+        "200":
+          description: Rotated session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "401":
+          $ref: "#/components/responses/Error"
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      responses:
+        "204":
+          description: Refresh family member revoked
+  /api/v1/auth/logout-all:
+    post:
+      tags: [auth]
+      operationId: logoutAll
+      security: [{ bearer: [] }]
+      responses:
+        "204":
+          description: All refresh tokens revoked
+        "401":
+          $ref: "#/components/responses/Error"
+  /api/v1/auth/forgot-password:
+    post:
+      tags: [auth]
+      operationId: forgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "202":
+          description: Always accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok: { type: boolean, enum: [true] }
+  /api/v1/auth/reset-password:
+    post:
+      tags: [auth]
+      operationId: resetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: { type: string }
+                password: { type: string, minLength: 10 }
+      responses:
+        "204":
+          description: Password updated
+        "400":
+          $ref: "#/components/responses/Error"
+  /api/v1/auth/verify-email:
+    post:
+      tags: [auth]
+      operationId: verifyEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        "204":
+          description: Email marked verified
+        "400":
+          $ref: "#/components/responses/Error"
+  /api/v1/auth/me:
+    get:
+      tags: [auth]
+      operationId: me
+      security: [{ bearer: [] }]
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Error"
+  /api/v1/me:
+    patch:
+      tags: [profile]
+      operationId: updateMe
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName: { type: string, minLength: 1, maxLength: 40 }
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Error"
+  /api/v1/players/{username}:
+    get:
+      tags: [profile]
+      operationId: getPlayer
+      security: [{ bearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Username"
+      responses:
+        "200":
+          description: Public profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicProfile"
+        "404":
+          $ref: "#/components/responses/Error"
+  /api/v1/me/history:
+    get:
+      tags: [profile]
+      operationId: myHistory
+      security: [{ bearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Own matches
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchSummaryPage"
+  /api/v1/leaderboard:
+    get:
+      tags: [profile]
+      operationId: leaderboard
+      security: [{ bearer: [] }]
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 100 }
+      responses:
+        "200":
+          description: Top players
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/LeaderboardRow"
+  /api/v1/problems:
+    get:
+      tags: [setter]
+      operationId: listPublishedProblems
+      security: [{ bearer: [] }]
+      parameters:
+        - in: query
+          name: language
+          schema: { $ref: "#/components/schemas/Language" }
+        - in: query
+          name: difficulty
+          schema: { $ref: "#/components/schemas/Difficulty" }
+        - in: query
+          name: roundType
+          schema: { $ref: "#/components/schemas/RoundType" }
+      responses:
+        "200":
+          description: Published problem summaries
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProblemSummary"
+  /api/v1/problems/{id}:
+    get:
+      tags: [setter]
+      operationId: getProblemForSetter
+      security: [{ bearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Full problem including hidden tests. Players receive 404.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          $ref: "#/components/responses/Error"
+  /api/v1/queue:
+    post:
+      tags: [queue]
+      operationId: joinQueue
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QueueRequest"
+      responses:
+        "202":
+          description: Queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueueState"
+        "403":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+    delete:
+      tags: [queue]
+      operationId: leaveQueue
+      security: [{ bearer: [] }]
+      responses:
+        "204":
+          description: Not queued
+    get:
+      tags: [queue]
+      operationId: getQueue
+      security: [{ bearer: [] }]
+      responses:
+        "200":
+          description: Current queue entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueueState"
+        "204":
+          description: Not queued
+  /api/v1/lobbies:
+    post:
+      tags: [lobbies]
+      operationId: createLobby
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QueueRequest"
+      responses:
+        "200":
+          description: Existing open lobby returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lobby"
+        "201":
+          description: Lobby created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lobby"
+  /api/v1/lobbies/{code}:
+    get:
+      tags: [lobbies]
+      operationId: getLobby
+      security: [{ bearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Code"
+      responses:
+        "200":
+          description: Lobby the caller is in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lobby"
+        "404":
+          $ref: "#/components/responses/Error"
+  /api/v1/lobbies/{code}/join:
+    post:
+      tags: [lobbies]
+      operationId: joinLobby
+      security: [{ bearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Code"
+      responses:
+        "200":
+          description: Joined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lobby"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+  /api/v1/lobbies/{code}/leave:
+    post:
+      tags: [lobbies]
+      operationId: leaveLobby
+      security: [{ bearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Code"
+      responses:
+        "204":
+          description: Left
+  /api/v1/matches/{id}:
+    get:
+      tags: [matches]
+      operationId: getMatch
+      security: [{ bearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Client snapshot for the caller
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchSnapshot"
+        "404":
+          $ref: "#/components/responses/Error"
+  /api/v1/matches/{id}/submissions:
+    post:
+      tags: [matches]
+      operationId: createSubmission
+      security: [{ bearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmissionRequest"
+      responses:
+        "200":
+          description: Choice submission judged immediately
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmissionAccepted"
+        "202":
+          description: Code submission queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmissionAccepted"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+  /api/v1/matches/{id}/submissions/{submissionId}:
+    get:
+      tags: [matches]
+      operationId: getSubmission
+      security: [{ bearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+        - in: path
+          name: submissionId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Submission visible to this caller
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmissionDetail"
+        "404":
+          $ref: "#/components/responses/Error"
+  /api/v1/matches/{id}/result:
+    get:
+      tags: [matches]
+      operationId: getResult
+      security: [{ bearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Final or void result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchResult"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+  /api/v1/matches/{id}/rematch:
+    post:
+      tags: [matches]
+      operationId: rematch
+      security: [{ bearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "201":
+          description: Unrated lobby created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lobby"
+        "409":
+          $ref: "#/components/responses/Error"
+  /api/v1/realtime/ticket:
+    post:
+      tags: [matches]
+      operationId: createRealtimeTicket
+      security: [{ bearer: [] }]
+      responses:
+        "201":
+          description: Single-use ticket
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ticket, expiresIn]
+                properties:
+                  ticket: { type: string }
+                  expiresIn: { type: integer, example: 30 }
+  /api/v1/setter/problems:
+    post:
+      tags: [setter]
+      operationId: createProblem
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProblemDraft"
+      responses:
+        "201":
+          description: Unpublished problem
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "403":
+          $ref: "#/components/responses/Error"
+  /api/v1/setter/problems/{id}:
+    patch:
+      tags: [setter]
+      operationId: updateProblem
+      security: [{ bearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProblemDraft"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          $ref: "#/components/responses/Error"
+  /api/v1/setter/problems/{id}/reference-run:
+    post:
+      tags: [setter]
+      operationId: referenceRun
+      security: [{ bearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [source]
+              properties:
+                source: { type: string, maxLength: 65536 }
+      responses:
+        "202":
+          description: Run queued
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [runId, status]
+                properties:
+                  runId: { type: string, format: uuid }
+                  status: { type: string, enum: [queued] }
+  /api/v1/setter/reference-runs/{runId}:
+    get:
+      tags: [setter]
+      operationId: getReferenceRun
+      security: [{ bearer: [] }]
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Reference run status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmissionDetail"
+  /api/v1/setter/problems/{id}/publish:
+    post:
+      tags: [setter]
+      operationId: publishProblem
+      security: [{ bearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          $ref: "#/components/responses/Error"
+  /api/v1/setter/problems/{id}/unpublish:
+    post:
+      tags: [setter]
+      operationId: unpublishProblem
+      security: [{ bearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Unpublished
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /api/v1/setter/problem-packs:
+    post:
+      tags: [setter]
+      operationId: importProblemPack
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProblemPack"
+      responses:
+        "200":
+          description: Whole pack imported
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [created, ids]
+                properties:
+                  created: { type: integer }
+                  ids:
+                    type: array
+                    items: { type: string, format: uuid }
+        "409":
+          $ref: "#/components/responses/Error"
+  /api/v1/admin/users/{id}:
+    patch:
+      tags: [admin]
+      operationId: setUserRole
+      security: [{ bearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { $ref: "#/components/schemas/Role" }
+      responses:
+        "200":
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "403":
+          $ref: "#/components/responses/Error"
+  /health/live:
+    get:
+      tags: [health]
+      operationId: live
+      responses:
+        "200":
+          description: Process is up
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok: { type: boolean }
+  /health/ready:
+    get:
+      tags: [health]
+      operationId: ready
+      responses:
+        "200":
+          description: Dependencies are up
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok: { type: boolean }
+        "503":
+          $ref: "#/components/responses/Error"
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Id:
+      in: path
+      name: id
+      required: true
+      schema: { type: string, format: uuid }
+    Username:
+      in: path
+      name: username
+      required: true
+      schema: { type: string, pattern: "^[a-z0-9_]{3,20}$" }
+    Code:
+      in: path
+      name: code
+      required: true
+      schema: { type: string, minLength: 6, maxLength: 6 }
+    Cursor:
+      in: query
+      name: cursor
+      schema: { type: string }
+    Limit:
+      in: query
+      name: limit
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+  schemas:
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, requestId]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details: { type: object, additionalProperties: true }
+            requestId: { type: string }
+    Language:
+      type: string
+      enum: [c, cpp, python, javascript]
+    Difficulty:
+      type: string
+      enum: [easy, medium, hard]
+    RoundType:
+      type: string
+      enum: [syntax, predict, logic, fix]
+    Role:
+      type: string
+      enum: [player, setter, admin]
+    Verdict:
+      type: string
+      enum:
+        - accepted
+        - wrong_answer
+        - compile_error
+        - runtime_error
+        - time_limit
+        - memory_limit
+        - output_limit
+        - internal_error
+        - rejected
+    SignupRequest:
+      type: object
+      required: [email, username, displayName, password]
+      properties:
+        email: { type: string, format: email }
+        username: { type: string, pattern: "^[a-z0-9_]{3,20}$" }
+        displayName: { type: string, minLength: 1, maxLength: 40 }
+        password: { type: string, minLength: 10, maxLength: 200 }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    User:
+      type: object
+      required: [id, username, displayName, role, rating, ratedMatches, wins, losses, draws]
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        displayName: { type: string }
+        role: { $ref: "#/components/schemas/Role" }
+        rating: { type: integer }
+        ratedMatches: { type: integer }
+        wins: { type: integer }
+        losses: { type: integer }
+        draws: { type: integer }
+    Session:
+      type: object
+      required: [accessToken, expiresIn, user]
+      properties:
+        accessToken: { type: string }
+        expiresIn: { type: integer }
+        user:
+          $ref: "#/components/schemas/User"
+    MatchSummary:
+      type: object
+      required: [matchId, playedAt, language, difficulty, rated, score, opponentScore, opponentUsername]
+      properties:
+        matchId: { type: string, format: uuid }
+        playedAt: { type: string, format: date-time }
+        language: { $ref: "#/components/schemas/Language" }
+        difficulty: { $ref: "#/components/schemas/Difficulty" }
+        rated: { type: boolean }
+        outcome: { type: string, nullable: true, enum: [win, loss, draw] }
+        score: { type: integer }
+        opponentScore: { type: integer }
+        opponentUsername: { type: string }
+        ratingDelta: { type: integer, nullable: true }
+    MatchSummaryPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MatchSummary"
+        nextCursor: { type: string, nullable: true }
+    PublicProfile:
+      type: object
+      required: [username, displayName, rating, wins, losses, draws, ratedMatches, joinedAt, recentMatches]
+      properties:
+        username: { type: string }
+        displayName: { type: string }
+        rating: { type: integer }
+        wins: { type: integer }
+        losses: { type: integer }
+        draws: { type: integer }
+        ratedMatches: { type: integer }
+        joinedAt: { type: string, format: date-time }
+        recentMatches:
+          type: array
+          items:
+            $ref: "#/components/schemas/MatchSummary"
+    LeaderboardRow:
+      type: object
+      required: [rank, username, displayName, rating, wins, losses, draws]
+      properties:
+        rank: { type: integer }
+        username: { type: string }
+        displayName: { type: string }
+        rating: { type: integer }
+        wins: { type: integer }
+        losses: { type: integer }
+        draws: { type: integer }
+    ProblemSummary:
+      type: object
+      required: [id, slug, title, language, difficulty, roundType]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        title: { type: string }
+        language: { $ref: "#/components/schemas/Language" }
+        difficulty: { $ref: "#/components/schemas/Difficulty" }
+        roundType: { $ref: "#/components/schemas/RoundType" }
+    ChoiceOption:
+      type: object
+      required: [id, text]
+      properties:
+        id: { type: string }
+        text: { type: string }
+    TestCase:
+      type: object
+      required: [input, expectedOutput]
+      properties:
+        input: { type: string }
+        expectedOutput: { type: string }
+    ProblemDraft:
+      type: object
+      required: [slug, language, difficulty, roundType, title, promptMd, explanationMd]
+      properties:
+        slug: { type: string }
+        language: { $ref: "#/components/schemas/Language" }
+        difficulty: { $ref: "#/components/schemas/Difficulty" }
+        roundType: { $ref: "#/components/schemas/RoundType" }
+        title: { type: string }
+        promptMd: { type: string }
+        starterCode: { type: string, nullable: true }
+        explanationMd: { type: string }
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChoiceOption"
+        correctOptionId: { type: string, nullable: true }
+        timeLimitMs: { type: integer }
+        memoryLimitKb: { type: integer }
+        samples:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestCase"
+        hidden:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestCase"
+    Problem:
+      allOf:
+        - $ref: "#/components/schemas/ProblemDraft"
+        - type: object
+          required: [id, isPublished]
+          properties:
+            id: { type: string, format: uuid }
+            isPublished: { type: boolean }
+            referencePassedAt: { type: string, format: date-time, nullable: true }
+    ProblemPack:
+      type: object
+      required: [packVersion, problems]
+      properties:
+        packVersion: { type: integer, enum: [1] }
+        problems:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProblemDraft"
+    QueueRequest:
+      type: object
+      required: [language, difficulty]
+      properties:
+        language: { $ref: "#/components/schemas/Language" }
+        difficulty: { $ref: "#/components/schemas/Difficulty" }
+    QueueState:
+      type: object
+      required: [language, difficulty, enqueuedAt, rating]
+      properties:
+        language: { $ref: "#/components/schemas/Language" }
+        difficulty: { $ref: "#/components/schemas/Difficulty" }
+        enqueuedAt: { type: string, format: date-time }
+        rating: { type: integer }
+    LobbyPlayer:
+      type: object
+      required: [username]
+      properties:
+        username: { type: string }
+    Lobby:
+      type: object
+      required: [code, language, difficulty, status, hostUsername, players, expiresAt]
+      properties:
+        code: { type: string }
+        language: { $ref: "#/components/schemas/Language" }
+        difficulty: { $ref: "#/components/schemas/Difficulty" }
+        status: { type: string, enum: [open, countdown, started, cancelled, expired] }
+        hostUsername: { type: string }
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/LobbyPlayer"
+        expiresAt: { type: string, format: date-time }
+        matchId: { type: string, format: uuid }
+        countdownEndsAt: { type: string, format: date-time }
+    SeatView:
+      type: object
+      required: [username, rating, totalScore, connected]
+      properties:
+        username: { type: string }
+        rating: { type: integer }
+        totalScore: { type: integer }
+        connected: { type: boolean }
+        roundStatus:
+          type: string
+          enum: [solving, judging, correct, wrong]
+    MatchSnapshot:
+      type: object
+      required: [matchId, status, origin, rated, language, difficulty, serverTime, you, opponent]
+      properties:
+        matchId: { type: string, format: uuid }
+        status: { type: string, enum: [countdown, live, final, void] }
+        origin: { type: string, enum: [quick, lobby] }
+        rated: { type: boolean }
+        language: { $ref: "#/components/schemas/Language" }
+        difficulty: { $ref: "#/components/schemas/Difficulty" }
+        serverTime: { type: string, format: date-time }
+        countdownEndsAt: { type: string, format: date-time, nullable: true }
+        you:
+          $ref: "#/components/schemas/SeatView"
+        opponent:
+          $ref: "#/components/schemas/SeatView"
+        round:
+          type: object
+          nullable: true
+          additionalProperties: true
+        yourSubmissions:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        intermission:
+          type: object
+          nullable: true
+          additionalProperties: true
+        result:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/MatchResult"
+    SubmissionRequest:
+      type: object
+      required: [roundIndex, kind]
+      properties:
+        roundIndex: { type: integer, minimum: 1, maximum: 4 }
+        kind: { type: string, enum: [graded, sample] }
+        language: { $ref: "#/components/schemas/Language" }
+        source: { type: string, maxLength: 65536 }
+        optionId: { type: string }
+    SubmissionAccepted:
+      type: object
+      required: [submissionId, status, kind]
+      properties:
+        submissionId: { type: string, format: uuid }
+        status: { type: string, enum: [queued, judged] }
+        kind: { type: string, enum: [graded, sample] }
+        verdict: { $ref: "#/components/schemas/Verdict" }
+        counted: { type: boolean }
+        score: { type: integer, nullable: true }
+        correct: { type: boolean }
+    SubmissionDetail:
+      type: object
+      required: [submissionId, status, kind]
+      properties:
+        submissionId: { type: string, format: uuid }
+        status: { type: string }
+        kind: { type: string }
+        verdict: { $ref: "#/components/schemas/Verdict" }
+        counted: { type: boolean }
+        testsPassed: { type: integer, nullable: true }
+        testsTotal: { type: integer, nullable: true }
+        source: { type: string, nullable: true }
+        compileStderr: { type: string, nullable: true }
+        sampleExcerpt: { type: string, nullable: true }
+    ResultPlayer:
+      type: object
+      required: [username, totalScore, ratingBefore, ratingAfter]
+      properties:
+        username: { type: string }
+        outcome: { type: string, nullable: true, enum: [win, loss, draw] }
+        totalScore: { type: integer }
+        ratingBefore: { type: integer }
+        ratingAfter: { type: integer }
+        ratingDelta: { type: integer, nullable: true }
+    RoundResult:
+      type: object
+      required: [index, type, title, yourScore, opponentScore]
+      properties:
+        index: { type: integer }
+        type: { $ref: "#/components/schemas/RoundType" }
+        title: { type: string }
+        yourScore: { type: integer }
+        opponentScore: { type: integer }
+        yourTimeMs: { type: integer, nullable: true }
+        opponentTimeMs: { type: integer, nullable: true }
+        explanationMd: { type: string, nullable: true }
+        correctOptionId: { type: string, nullable: true }
+        yourOptionId: { type: string, nullable: true }
+        opponentOptionId: { type: string, nullable: true }
+        yourBestSource: { type: string, nullable: true }
+        opponentBestSource: { type: string, nullable: true }
+    MatchResult:
+      type: object
+      required: [matchId, status, rated, language, difficulty, you, opponent, rounds]
+      properties:
+        matchId: { type: string, format: uuid }
+        status: { type: string, enum: [final, void] }
+        rated: { type: boolean }
+        endReason: { type: string }
+        language: { $ref: "#/components/schemas/Language" }
+        difficulty: { $ref: "#/components/schemas/Difficulty" }
+        you:
+          $ref: "#/components/schemas/ResultPlayer"
+        opponent:
+          $ref: "#/components/schemas/ResultPlayer"
+        rounds:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoundResult"

@@ -1,0 +1,79 @@
+{
+  "packVersion": 1,
+  "problems": [
+    {
+      "slug": "py-syntax-missing-colon",
+      "language": "python",
+      "difficulty": "easy",
+      "roundType": "syntax",
+      "title": "Missing colon",
+      "promptMd": "This program should print `ok` if the input number is positive and `no` otherwise. It does not run. Fix the syntax error and leave the behavior the same.",
+      "starterCode": "n = int(input())\nif n > 0\n    print(\"ok\")\nelse:\n    print(\"no\")\n",
+      "explanationMd": "The `if` header is missing its trailing colon.",
+      "timeLimitMs": 2000,
+      "memoryLimitKb": 131072,
+      "samples": [
+        { "input": "3\n", "expectedOutput": "ok\n" }
+      ],
+      "hidden": [
+        { "input": "0\n", "expectedOutput": "no\n" },
+        { "input": "-4\n", "expectedOutput": "no\n" },
+        { "input": "10\n", "expectedOutput": "ok\n" }
+      ]
+    },
+    {
+      "slug": "py-predict-loop-sum",
+      "language": "python",
+      "difficulty": "easy",
+      "roundType": "predict",
+      "title": "What does this print?",
+      "promptMd": "Choose the exact output of this program. There is no input.",
+      "starterCode": "s = 0\nfor i in range(1, 4):\n    s += i\nprint(s)\n",
+      "explanationMd": "`range(1, 4)` yields 1, 2, and 3. Their sum is 6.",
+      "options": [
+        { "id": "a", "text": "6" },
+        { "id": "b", "text": "10" },
+        { "id": "c", "text": "4" },
+        { "id": "d", "text": "123" }
+      ],
+      "correctOptionId": "a"
+    },
+    {
+      "slug": "py-logic-off-by-one",
+      "language": "python",
+      "difficulty": "easy",
+      "roundType": "logic",
+      "title": "Find the logical error",
+      "promptMd": "The program should print the sum of the integers from 1 through n, where n is the input. It compiles and runs, but the result is wrong. Which statement best describes the bug?",
+      "starterCode": "n = int(input())\ns = 0\nfor i in range(1, n):\n    s += i\nprint(s)\n",
+      "explanationMd": "`range(1, n)` stops before n, so the last term is missing. The stop value must be `n + 1`.",
+      "options": [
+        { "id": "a", "text": "The loop includes n one time too many." },
+        { "id": "b", "text": "The loop never adds n, because range stops before n." },
+        { "id": "c", "text": "print writes the sum twice." },
+        { "id": "d", "text": "int(input()) cannot read a positive integer." }
+      ],
+      "correctOptionId": "b"
+    },
+    {
+      "slug": "py-fix-sum-list",
+      "language": "python",
+      "difficulty": "easy",
+      "roundType": "fix",
+      "title": "Sum the numbers",
+      "promptMd": "The first line of input is an integer n. The second line contains n integers. Print their sum. The starter returns 0 for every input. Fix it.",
+      "starterCode": "n = int(input())\nnums = list(map(int, input().split()))\nprint(0)\n",
+      "explanationMd": "Print the sum of `nums` instead of 0.",
+      "timeLimitMs": 2000,
+      "memoryLimitKb": 131072,
+      "samples": [
+        { "input": "3\n1 2 3\n", "expectedOutput": "6\n" }
+      ],
+      "hidden": [
+        { "input": "1\n5\n", "expectedOutput": "5\n" },
+        { "input": "4\n-1 0 1 2\n", "expectedOutput": "2\n" },
+        { "input": "2\n10 20\n", "expectedOutput": "30\n" }
+      ]
+    }
+  ]
+}
